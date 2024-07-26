@@ -1,55 +1,64 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCarDto } from './dto/create-car.dto';
 import { UpdateCarDto } from './dto/update-car.dto';
-import { Car } from './entities/car.entity';
+import { PrismaService } from 'src/database/prisma.service';
 
 @Injectable()
 export class CarsService {
-  private readonly cars: Car[] = []
-  private id = 1
+  constructor(private readonly prisma: PrismaService){}
 
-  create(createCarDto: CreateCarDto) {
+  async create(createCarDto: CreateCarDto) {
     const newCar = {
-      id: this.id,
       brand: createCarDto.brand,
       model: createCarDto.model,
       year: createCarDto.year,
     }
-    this.id = this.id + 1
-    this.cars.push(newCar)
+    return await this.prisma.car.create({
+      data: newCar,
+    })
 
-    return newCar
   }
 
-  findAll() {
-    return this.cars;
+  async findAll() {
+    return await this.prisma.car.findMany();
   }
 
-  findOne(id: number) {
-    const car = this.cars.find(car => car.id === id);
+  async findOne(id: number) {
+    const car = await this.prisma.car.findFirst({
+      where: {
+        id,
+      },
+    })
+    
     if (!car) {
       throw new NotFoundException('Carro não encontrado')
     }
     return car;
   }
 
-  update(id: number, updateCarDto: UpdateCarDto) {
-    const car = this.findOne(id)
-
-    car.brand = updateCarDto.brand
-    car.model = updateCarDto.model
-    car.year = updateCarDto.year
-
-    return;
+  async update(id: number, updateCarDto: UpdateCarDto) {
+    await this.findOne(id)
+  
+    const updatedCar = await this.prisma.car.update({
+        where: {
+          id,
+        },
+        data: updateCarDto,
+    })
+  
+    return updatedCar;
   }
-
-  remove(id: number) {
-    this.findOne(id)
-
-    const carIndex =  this.cars.findIndex(car => car.id === id);
-
-    this.cars.splice(carIndex, 1)
-
-    return;
+  
+  async remove(id: number) {
+    await this.findOne(id)
+  
+    const deletedCar = await this.prisma.car.delete({
+      where: {
+        id,
+      },
+    });
+  
+    return deletedCar;
   }
-}
+  
+};
